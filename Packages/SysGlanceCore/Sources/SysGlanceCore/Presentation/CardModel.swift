@@ -11,10 +11,6 @@ public struct CardModel: Sendable, Equatable, Identifiable {
     public var level: Level
     /// リング表示用の割合（0...1）。割合で表せない項目は nil。
     public var gauge: Double?
-    /// 0〜2系列。古い順。
-    public var series: [[Double]]
-    /// nil なら系列の最大値で自動スケール
-    public var seriesMax: Double?
     public var accessibilityLabel: String
     public var id: MetricKind { kind }
 }
@@ -53,31 +49,26 @@ public enum CardModelBuilder {
     }
 
     /// `kinds` の順に並べる。バッテリーが取得できない（デスクトップMac）場合はバッテリーカードを省く。
-    public static func cards(latest: MetricsSnapshot?, history: [MetricsSnapshot], kinds: [MetricKind],
+    public static func cards(latest: MetricsSnapshot?, kinds: [MetricKind],
                              processLimit: Int = 3) -> [CardModel] {
         kinds.compactMap { kind in
             if kind == .battery, latest?.battery == nil { return nil }
-            return card(kind, latest: latest, history: history, processLimit: processLimit)
+            return card(kind, latest: latest, processLimit: processLimit)
         }
     }
 
-    public static func card(_ kind: MetricKind, latest s: MetricsSnapshot?, history: [MetricsSnapshot],
-                            processLimit: Int = 3) -> CardModel {
+    public static func card(_ kind: MetricKind, latest s: MetricsSnapshot?, processLimit: Int = 3) -> CardModel {
         var c = CardModel(kind: kind, title: title(of: kind), symbol: symbol(of: kind),
-                          value: placeholder, detail: "", level: .normal, gauge: nil, series: [], seriesMax: nil,
+                          value: placeholder, detail: "", level: .normal, gauge: nil,
                           accessibilityLabel: "\(title(of: kind)) 取得できません")
         switch kind {
         case .cpu:
-            c.seriesMax = 1
-            c.series = [history.map { $0.cpu?.usage ?? 0 }]
             if let cpu = s?.cpu {
                 c.value = Fmt.percent(cpu.usage)
                 c.gauge = cpu.usage
                 c.accessibilityLabel = "CPU 使用率 \(Fmt.percent(cpu.usage))"
             }
         case .memory:
-            c.seriesMax = 1
-            c.series = [history.map { m in m.memory.map { Double($0.used) / Double(max($0.total, 1)) } ?? 0 }]
             if let m = s?.memory {
                 let used = Fmt.bytes(m.used, base: .binary)
                 let total = Fmt.bytes(m.total, base: .binary)
@@ -89,14 +80,12 @@ public enum CardModelBuilder {
                 c.accessibilityLabel = "メモリ \(used) 使用、\(total) 中、プレッシャー\(pressure)"
             }
         case .network:
-            c.series = [history.map { $0.network?.inbound ?? 0 }, history.map { $0.network?.outbound ?? 0 }]
             if let n = s?.network {
                 c.value = "↓ \(Fmt.rate(n.inbound))"
                 c.detail = "↑ \(Fmt.rate(n.outbound))"
                 c.accessibilityLabel = "ネットワーク 下り \(Fmt.rate(n.inbound))、上り \(Fmt.rate(n.outbound))"
             }
         case .disk:
-            c.series = [history.map { $0.diskIO?.inbound ?? 0 }, history.map { $0.diskIO?.outbound ?? 0 }]
             if let d = s?.disk {
                 let free = Fmt.bytes(d.available, base: .decimal)
                 let total = Fmt.bytes(d.total, base: .decimal)
@@ -112,8 +101,6 @@ public enum CardModelBuilder {
                 c.accessibilityLabel += "、読み込み \(Fmt.rate(io.inbound))、書き込み \(Fmt.rate(io.outbound))"
             }
         case .battery:
-            c.seriesMax = 1
-            c.series = [history.map { $0.battery?.level ?? 0 }]
             if let b = s?.battery {
                 let state: String
                 if b.isCharging {

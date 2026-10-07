@@ -4,19 +4,25 @@ import SysGlanceCore
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private let store = MetricsStore()
-    private let settings = PanelSettings()
     private let publisher = SnapshotPublisher()
     private lazy var detail = DetailWindowController(store: store)
-    private var panel: DesktopPanelController?
+    private var launchedAsLoginItem = false
+
+    func applicationWillFinishLaunching(_ notification: Notification) {
+        // ログイン時の自動起動では詳細ウィンドウを出さず、裏でウィジェット用の計測だけ行う
+        if let event = NSAppleEventManager.shared().currentAppleEvent,
+           event.eventID == AEEventID(kAEOpenApplication),
+           event.paramDescriptor(forKeyword: AEKeyword(keyAEPropData))?.enumCodeValue == OSType(keyAELaunchedAsLogInItem) {
+            launchedAsLoginItem = true
+        }
+    }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         store.onSample = { [publisher] snapshot in publisher.publish(snapshot) }
-        let panel = DesktopPanelController(store: store, settings: settings) { [weak self] in
-            self?.detail.show()
-        }
-        panel.show()
-        self.panel = panel
         store.start()
+        if !launchedAsLoginItem {
+            detail.show()
+        }
 
         let center = NSWorkspace.shared.notificationCenter
         center.addObserver(forName: NSWorkspace.willSleepNotification, object: nil, queue: .main) { [weak self] _ in

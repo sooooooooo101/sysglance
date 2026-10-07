@@ -7,9 +7,9 @@
 
 自分のMac（macOS 26）で、SSD・メモリを中心としたシステム稼働状況を**デスクトップ上で常に**確認できるようにする。
 
-- リアルタイム（1秒更新）で見たい → デスクトップに貼り付くパネル
-- 純正ウィジェットでも概要を見たい → WidgetKit ウィジェット（OS予算内で更新）
-- 詳しく見たいとき → ウィジェットのタップ／パネルから開く詳細ウィンドウ
+- デスクトップで概要を見たい → WidgetKit ウィジェット（OS予算内で更新）
+- 詳しく見たいとき → アプリを開く／ウィジェットのタップで開く詳細ウィンドウ（1秒更新・30分グラフ）
+- （当初あったデスクトップ貼り付けパネルは §12 で削除）
 
 利用者は本人のみ。配布・公証はしない。
 
@@ -35,8 +35,7 @@ SysGlance.app（LSUIElement 常駐、App Sandbox 無効）
   │    Model / Math / Format / Shared / System(Readers) / Engine
   ├─ MetricsStore（@Observable、1800点＝30分のリングバッファ）
   ├─ SnapshotPublisher（30秒ごとに App Group へ snapshot.json）
-  ├─ SharedUI（パネルとウィジェットで共通のレイアウト: LayoutSize / MetricsLayout / Sparkline）
-  ├─ DesktopPanel（デスクトップレベルの NSPanel + SwiftUI）
+  ├─ SharedUI（ウィジェットのレイアウト: LayoutSize / MetricsLayout）
   └─ DetailWindow（通常ウィンドウ、Swift Charts）
 SysGlanceWidget.appex（WidgetKit、App Sandbox 有効）
   └─ snapshot.json を読んで Small/Medium/Large を表示、タップで sysglance://detail
@@ -59,26 +58,22 @@ SysGlanceWidget.appex（WidgetKit、App Sandbox 有効）
 
 ## 4. UI / インタラクション（apple-design 準拠）
 
-### サイズ（パネルとウィジェット共通）
+### ウィジェットのサイズ
 
-macOS のデスクトップウィジェットと同じ3サイズ。パネルとウィジェットは同じレイアウト部品（`MetricsLayout`）を使い、違いは「パネルは1秒更新＋スパークライン、ウィジェットは OS 予算内の更新＋『○分前』表示」のみ。
+| サイズ | 内容 |
+|---|---|
+| Small | CPU・メモリのリング |
+| Medium | CPU / メモリ / SSD / ネットワークの 2×2 |
+| Large | 全項目の縦リスト＋SSD読み書き・上位3プロセス |
 
-| サイズ | 外形 | 内容 |
-|---|---|---|
-| Small（小） | 170×170 | CPU・メモリのリング |
-| Medium（中） | 364×170 | CPU / メモリ / SSD / ネットワークの 2×2（パネルは各セルに小スパークライン） |
-| Large（大） | 364×382 | 全項目の縦リスト＋SSD読み書き・上位3プロセス（パネルは各行にスパークライン） |
-
-### デスクトップパネル
-- サイズは右クリックメニューで Small / Medium / Large を選択（既定 Large）。UserDefaults に保存。サイズ変更時は左上を固定。
-- Liquid Glass（`glassEffect(.regular, in: .rect(cornerRadius: 22))`）、内側余白 16pt。
-- スパークラインは直近2分（120点）。データが少ないうちは右寄せ。GPU で描かれる `Shape` で実装（`Canvas` は CPU ラスタライズになり重い）。
-- 数値は `monospacedDigit()`。**`contentTransition(.numericText())` は使わない**（ぼかしを伴い、ガラス上で毎秒 CPU 描画を誘発し常駐 CPU が約20%になったため）。
+- 数値は `monospacedDigit()`。`contentTransition(.numericText())`・`Canvas`・ぼかしは使わない（試作で常駐CPUが約20%になったため）。
 - 色は単色基調。状態色は警告時のみ（メモリプレッシャー黄/赤、SSD空き10%未満、バッテリー20%未満で非充電）。色に加えアイコン（⚠︎/⛔︎）で示す。
-- ウィンドウレベルは `desktopIconWindow + 1`（壁紙・アイコンの上、通常ウィンドウの下）。全Spacesに表示（`.canJoinAllSpaces, .stationary, .ignoresCycle`）。
-- ドラッグで移動（3pt 以上動いたらドラッグ開始）。離した瞬間の速度で着地点を投射し、画面端から24pt以内なら端（マージン16pt）へ吸着。吸着は臨界減衰スプリング（damping 1.0, response 0.35）で速度を引き継ぐ。アニメーション中に掴むと即停止（割り込み可能）。位置は UserDefaults に保存し、起動時に画面外なら既定位置（メイン画面右上）。ディスプレイ構成変更時は画面内へ戻す。
-- ダブルクリックで詳細ウィンドウ。
-- 右クリックメニュー: サイズ（小/中/大）、詳細を開く、ログイン時に起動、終了。
+
+### 起動とウィンドウ
+- アプリを開く（Finder / Spotlight / 再度の起動）と詳細ウィンドウを表示。ログイン項目として自動起動したときは表示せず裏で計測のみ。
+- 詳細ウィンドウを閉じても本体は常駐し、ウィジェット用の書き出しを続ける（Dock 非表示）。
+- 詳細ウィンドウが見えていない間（閉じた・隠れた）は SwiftUI の表示を外し、見えたら作り直す（常駐CPUを抑えるため）。選択中の項目は保持。
+- 詳細ウィンドウのツールバー右の歯車メニュー: ログイン時に起動、SysGlance を終了。
 
 ### 詳細ウィンドウ
 - サイドバー（項目一覧）＋右に30分グラフ（Swift Charts）と内訳。
@@ -91,8 +86,6 @@ macOS のデスクトップウィジェットと同じ3サイズ。パネルと�
 - タップで `sysglance://detail`（本体が起動していなければ起動して詳細ウィンドウ）。
 
 ### アクセシビリティ
-- Reduce Motion: スプリング吸着を無効化（即時移動）。
-- Reduce Transparency: ガラスを不透明背景（`windowBackgroundColor`）に置換。
 - VoiceOver: 各カードを1要素に結合し「メモリ 12.3 GB 使用、16.0 GB 中、プレッシャー正常」形式で読み上げ。スパークラインは読み上げ対象外。
 
 UI文言は日本語。
@@ -101,7 +94,7 @@ UI文言は日本語。
 
 ```
 Timer(1s) → SamplingEngine(actor).sample() → MetricsSnapshot（不変・Codable）
-  → MetricsStore.append()（MainActor, @Observable）→ パネル / 詳細ウィンドウ再描画
+  → MetricsStore.append()（MainActor, @Observable）→ 詳細ウィンドウ再描画（見えている間のみ）
   → 30秒毎: SnapshotFile.write（atomic）→ 条件付き WidgetCenter.reloadAllTimelines()
 ```
 
@@ -126,7 +119,7 @@ Timer(1s) → SamplingEngine(actor).sample() → MetricsSnapshot（不変・Coda
 
 - 単体テスト（`swift test`、SysGlanceCore）: カウンタ差分（通常/巻き戻り/経過0/初回）、CPU%（0〜100）、プレッシャー段階・容量/バッテリー閾値、リングバッファ（上限1800・古い順破棄）、snapshot往復・鮮度判定、単位フォーマット、スプリング・吸着計算、実機Readerのスモークテスト。
 - ビルド: `xcodebuild -scheme SysGlance build` 成功、警告なし（警告はエラー扱い）。
-- 実機チェック: パネルのレベルと全Spaces表示、3サイズの切替、ドラッグと吸着、画面外位置からの復帰、アクティビティモニタとの値比較、ウィジェット追加・表示・タップで詳細、本体停止時のウィジェット表示、ログイン時起動、Reduce Motion / Transparency、常駐CPU<2%。
+- 実機チェック: 起動で詳細ウィンドウのみ表示、アクティビティモニタとの値比較、ウィジェット追加・表示・タップで詳細、本体停止時のウィジェット表示、ログイン時起動（ウィンドウを出さない）、詳細ウィンドウが見えていないときの常駐CPU<2%。
 
 ## 9. スコープ外
 
@@ -150,3 +143,7 @@ Timer(1s) → SamplingEngine(actor).sample() → MetricsSnapshot（不変・Coda
 | ウィジェット再読込の最短間隔 | 5分 | 15分 | 5分（最大288回/日）は WidgetKit の1日予算（目安40〜70回）を超え、超過後は更新が止まる |
 | 鮮度判定（起動していない表示） | 10分 | 45分 | 予算により再読込が間引かれると、動作中でも「起動していません」と誤表示されるため |
 | ネットワークの除外IF | lo, utun, awdl, llw, bridge, anpi, gif, stf | 左記 + ipsec, ppp, ap, vmenet | 標準VPN（IKEv2/L2TP）・インターネット共有・VMの通信が物理IFと二重計上されるため |
+
+## 12. デスクトップパネルの削除（2026-10-07、Product Owner 判断）
+
+アプリを開くとパネルが出るのを避けたいという判断により、デスクトップパネルを機能ごと削除した（純正ウィジェット＋詳細ウィンドウのみ）。§4 の旧パネル仕様（ドラッグ・吸着・スプリング・サイズ選択・スパークライン）と §10 のパネル関連行は無効。関連コード（DesktopPanel, DraggablePanel, PanelSettings, Sparkline, CriticalSpring, EdgeSnap, PanelPlacement, DragTracker）は削除済み。

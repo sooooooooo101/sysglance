@@ -18,8 +18,7 @@ struct SysGlanceWidgetView: View {
         Group {
             if let envelope = entry.envelope, !SnapshotFile.isStale(envelope, now: entry.date) {
                 MetricsLayout(size: size,
-                              cards: CardModelBuilder.cards(latest: envelope.snapshot, history: [], kinds: size.kinds),
-                              sparklineCapacity: 0,
+                              cards: CardModelBuilder.cards(latest: envelope.snapshot, kinds: size.kinds),
                               footer: Fmt.ago(from: envelope.capturedAt, now: entry.date))
             } else {
                 StaleView()

@@ -1,28 +1,9 @@
 import SwiftUI
 import SysGlanceCore
 
-/// パネルとウィジェットで共通のサイズ。macOS のデスクトップウィジェットとほぼ同じ寸法。
-enum LayoutSize: String, CaseIterable, Identifiable, Sendable {
+/// ウィジェットのサイズごとに表示する項目。
+enum LayoutSize: Sendable {
     case small, medium, large
-
-    var id: String { rawValue }
-
-    var title: String {
-        switch self {
-        case .small: "小"
-        case .medium: "中"
-        case .large: "大"
-        }
-    }
-
-    /// 外形（ウィジェットのコンテンツ余白 16pt を含む）
-    var size: CGSize {
-        switch self {
-        case .small: CGSize(width: 170, height: 170)
-        case .medium: CGSize(width: 364, height: 170)
-        case .large: CGSize(width: 364, height: 382)
-        }
-    }
 
     var kinds: [MetricKind] {
         switch self {
@@ -33,13 +14,11 @@ enum LayoutSize: String, CaseIterable, Identifiable, Sendable {
     }
 }
 
-/// サイズごとのレイアウト。余白・背景は呼び出し側（パネル / containerBackground）が持つ。
+/// サイズごとのレイアウト。余白・背景は containerBackground が持つ。
 struct MetricsLayout: View {
     let size: LayoutSize
     let cards: [CardModel]
-    /// スパークラインの横幅に対応する点数。0 ならスパークラインを描かない（ウィジェット）。
-    let sparklineCapacity: Int
-    /// "3分前" など。リアルタイム表示では nil。
+    /// "3分前" など
     let footer: String?
 
     var body: some View {
@@ -48,9 +27,9 @@ struct MetricsLayout: View {
             case .small:
                 SmallLayout(cards: cards)
             case .medium:
-                MediumLayout(cards: cards, sparklineCapacity: sparklineCapacity)
+                MediumLayout(cards: cards)
             case .large:
-                LargeLayout(cards: cards, sparklineCapacity: sparklineCapacity)
+                LargeLayout(cards: cards)
             }
             if let footer {
                 Spacer(minLength: 4)
@@ -106,15 +85,14 @@ private struct RingStat: View {
 
 private struct MediumLayout: View {
     let cards: [CardModel]
-    let sparklineCapacity: Int
 
     var body: some View {
         Grid(alignment: .topLeading, horizontalSpacing: 16, verticalSpacing: 12) {
             ForEach(Array(stride(from: 0, to: cards.count, by: 2)), id: \.self) { i in
                 GridRow {
-                    CompactCell(card: cards[i], sparklineCapacity: sparklineCapacity)
+                    CompactCell(card: cards[i])
                     if i + 1 < cards.count {
-                        CompactCell(card: cards[i + 1], sparklineCapacity: sparklineCapacity)
+                        CompactCell(card: cards[i + 1])
                     }
                 }
             }
@@ -122,20 +100,14 @@ private struct MediumLayout: View {
     }
 }
 
-/// Medium 用：タイトル・値・（あれば）小さなスパークライン
+/// Medium 用：タイトルと値
 private struct CompactCell: View {
     let card: CardModel
-    let sparklineCapacity: Int
 
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
             CardHeader(card: card)
             CardValue(card: card, font: .system(.callout, design: .rounded).weight(.semibold))
-            if sparklineCapacity > 0, !card.series.isEmpty {
-                Sparkline(series: card.series, maxValue: card.seriesMax, capacity: sparklineCapacity, tint: card.level.tint)
-                    .frame(height: 16)
-                    .padding(.top, 2)
-            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .accessibilityElement(children: .ignore)
@@ -145,7 +117,6 @@ private struct CompactCell: View {
 
 private struct LargeLayout: View {
     let cards: [CardModel]
-    let sparklineCapacity: Int
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -162,11 +133,7 @@ private struct LargeLayout: View {
                                 .lineLimit(card.kind == .system ? 3 : 2)
                         }
                     }
-                    Spacer(minLength: 6)
-                    if sparklineCapacity > 0, !card.series.isEmpty {
-                        Sparkline(series: card.series, maxValue: card.seriesMax, capacity: sparklineCapacity, tint: card.level.tint)
-                            .frame(width: 88, height: 24)
-                    }
+                    Spacer(minLength: 0)
                 }
                 .accessibilityElement(children: .ignore)
                 .accessibilityLabel(card.accessibilityLabel)
@@ -192,7 +159,6 @@ private struct CardValue: View {
 
     var body: some View {
         HStack(spacing: 4) {
-            // numericText トランジションはぼかしを伴い、ガラス上で毎秒 CPU 描画を誘発するため使わない
             Text(card.kind == .network ? "\(card.value)  \(card.detail)" : card.value)
                 .font(font)
                 .monospacedDigit()

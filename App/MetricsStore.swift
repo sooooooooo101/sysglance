@@ -7,8 +7,6 @@ import SysGlanceCore
 final class MetricsStore {
     /// 1秒間隔で30分
     static let historyCapacity = 1800
-    /// パネルのスパークラインは直近2分
-    static let panelWindow = 120
 
     private(set) var history = RingBuffer<MetricsSnapshot>(capacity: historyCapacity)
     var latest: MetricsSnapshot? { history.last }

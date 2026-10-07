@@ -1,4 +1,3 @@
-import CoreGraphics
 import Foundation
 import Testing
 @testable import SysGlanceCore
@@ -69,77 +68,5 @@ import Testing
         _ = calc.update(CPUTicks(user: 0, system: 0, idle: 0, nice: 0))
         let usage = calc.update(CPUTicks(user: 1_000, system: 0, idle: 0, nice: 0))
         #expect(usage == 1)
-    }
-}
-
-@Suite struct SpringTests {
-    @Test func convergesToTargetWithoutOvershoot() {
-        var spring = CriticalSpring(position: 0, target: 100, response: 0.35)
-        var maxPosition = 0.0
-        for _ in 0..<120 {
-            spring.step(dt: 1.0 / 60)
-            maxPosition = max(maxPosition, spring.position)
-        }
-        #expect(spring.isSettled)
-        #expect(abs(spring.position - 100) < 0.5)
-        #expect(maxPosition <= 100.0001)
-    }
-
-    @Test func inheritsInitialVelocity() {
-        var spring = CriticalSpring(position: 0, velocity: 2_000, target: 0, response: 0.35)
-        spring.step(dt: 1.0 / 60)
-        #expect(spring.position > 0)
-    }
-
-    @Test func largeStepDoesNotExplode() {
-        var spring = CriticalSpring(position: 0, velocity: 5_000, target: 100, response: 0.35)
-        spring.step(dt: 10)
-        #expect(abs(spring.position - 100) < 0.5)
-        #expect(spring.isSettled)
-    }
-
-    @Test func zeroStepIsNoop() {
-        var spring = CriticalSpring(position: 3, velocity: 4, target: 10)
-        spring.step(dt: 0)
-        #expect(spring.position == 3)
-        #expect(spring.velocity == 4)
-    }
-}
-
-@Suite struct EdgeSnapTests {
-    let screen = CGRect(x: 0, y: 0, width: 1000, height: 800)
-
-    @Test func snapsToNearLeftAndTopEdges() {
-        let frame = CGRect(x: 10, y: 800 - 300 - 20, width: 320, height: 300)
-        let target = EdgeSnap.target(for: frame, in: screen)
-        #expect(target == CGPoint(x: 16, y: 800 - 300 - 16))
-    }
-
-    @Test func snapsToNearRightEdge() {
-        let frame = CGRect(x: 1000 - 320 - 5, y: 300, width: 320, height: 300)
-        #expect(EdgeSnap.target(for: frame, in: screen).x == CGFloat(1000 - 320 - 16))
-    }
-
-    @Test func keepsPositionAwayFromEdges() {
-        let frame = CGRect(x: 300, y: 250, width: 320, height: 300)
-        #expect(EdgeSnap.target(for: frame, in: screen) == CGPoint(x: 300, y: 250))
-    }
-
-    @Test func clampsOffscreenFrameBackOntoScreen() {
-        let frame = CGRect(x: 5_000, y: -2_000, width: 320, height: 300)
-        let target = EdgeSnap.target(for: frame, in: screen)
-        #expect(target == CGPoint(x: 1000 - 320 - 16, y: 16))
-    }
-
-    @Test func screenWithNonZeroOrigin() {
-        let second = CGRect(x: -1440, y: 0, width: 1440, height: 900)
-        let frame = CGRect(x: -1430, y: 400, width: 320, height: 300)
-        #expect(EdgeSnap.target(for: frame, in: second).x == CGFloat(-1440 + 16))
-    }
-
-    @Test func projectionMatchesAppleFormula() {
-        // 1000pt/s, rate 0.998 → 1 * 0.998 / 0.002 = 499
-        #expect(abs(EdgeSnap.project(velocity: 1_000) - 499) < 0.001)
-        #expect(EdgeSnap.project(velocity: 0) == 0)
     }
 }

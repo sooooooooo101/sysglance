@@ -4,20 +4,35 @@ import SysGlanceCore
 
 struct DetailView: View {
     let store: MetricsStore
-    @State private var selection: MetricKind? = .cpu
+    let loginItem: LoginItem
+    @Bindable var state: DetailState
 
     var body: some View {
         NavigationSplitView {
-            List(MetricKind.allCases, selection: $selection) { kind in
+            List(MetricKind.allCases, selection: $state.selection) { kind in
                 Label(CardModelBuilder.title(of: kind), systemImage: CardModelBuilder.symbol(of: kind))
                     .tag(kind)
             }
             .navigationSplitViewColumnWidth(min: 160, ideal: 180)
         } detail: {
-            if let kind = selection {
+            if let kind = state.selection {
                 DetailPane(kind: kind, store: store)
             } else {
                 ContentUnavailableView("項目を選択してください", systemImage: "sidebar.left")
+            }
+        }
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                Menu {
+                    Toggle("ログイン時に起動", isOn: Binding(
+                        get: { loginItem.isEnabled },
+                        set: { loginItem.setEnabled($0) }
+                    ))
+                    Divider()
+                    Button("SysGlance を終了") { NSApp.terminate(nil) }
+                } label: {
+                    Label("設定", systemImage: "gearshape")
+                }
             }
         }
     }
@@ -29,7 +44,7 @@ private struct DetailPane: View {
 
     var body: some View {
         let latest = store.latest
-        let card = CardModelBuilder.card(kind, latest: latest, history: [], processLimit: 10)
+        let card = CardModelBuilder.card(kind, latest: latest, processLimit: 10)
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
                 VStack(alignment: .leading, spacing: 4) {
