@@ -32,7 +32,7 @@ final class DesktopPanelController: NSObject {
         hosting.sizingOptions = []
         panel.contentView = hosting
 
-        panel.onDragBegan = { [weak self] in self?.stopAnimation() }
+        panel.onDragBegan = { [weak self] in self?.stopAnimation() ?? false }
         panel.onDragEnded = { [weak self] velocity in self?.settle(velocity: velocity) }
         panel.onDoubleClick = openDetail
 
@@ -116,11 +116,15 @@ final class DesktopPanelController: NSObject {
         }
     }
 
-    private func stopAnimation() {
+    /// アニメーション中だったら true
+    @discardableResult
+    private func stopAnimation() -> Bool {
+        let wasAnimating = displayLink != nil
         displayLink?.invalidate()
         displayLink = nil
         lastTimestamp = nil
         springX = nil
         springY = nil
+        return wasAnimating
     }
 }
