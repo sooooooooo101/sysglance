@@ -159,7 +159,7 @@ private struct LargeLayout: View {
                                 .font(.caption2)
                                 .foregroundStyle(.secondary)
                                 .monospacedDigit()
-                                .lineLimit(card.kind == .system ? 3 : 1)
+                                .lineLimit(card.kind == .system ? 3 : 2)
                         }
                     }
                     Spacer(minLength: 6)
