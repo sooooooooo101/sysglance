@@ -63,8 +63,9 @@ enum Fixtures {
 
     @Test func staleness() throws {
         let envelope = try SnapshotFile.decode(SnapshotFile.encode(Fixtures.snapshot, capturedAt: Fixtures.date))
-        #expect(!SnapshotFile.isStale(envelope, now: Fixtures.date.addingTimeInterval(599)))
-        #expect(SnapshotFile.isStale(envelope, now: Fixtures.date.addingTimeInterval(600)))
+        // OS がウィジェット再読込を間引いても、動作中の本体を「起動していない」と誤判定しない長さにする
+        #expect(!SnapshotFile.isStale(envelope, now: Fixtures.date.addingTimeInterval(2_699)))
+        #expect(SnapshotFile.isStale(envelope, now: Fixtures.date.addingTimeInterval(2_700)))
     }
 }
 
@@ -77,11 +78,12 @@ enum Fixtures {
         #expect(reload)
     }
 
-    @Test func throttlesWithinFiveMinutes() {
+    /// WidgetKit の1日あたり予算（目安 40〜70 回）に収まるよう 15 分間隔（最大 96 回/日）
+    @Test func throttlesWithinFifteenMinutes() {
         var policy = WidgetReloadPolicy()
         _ = policy.shouldReload(now: t0, pressure: .normal)
-        let early = policy.shouldReload(now: t0.addingTimeInterval(299), pressure: .normal)
-        let due = policy.shouldReload(now: t0.addingTimeInterval(300), pressure: .normal)
+        let early = policy.shouldReload(now: t0.addingTimeInterval(899), pressure: .normal)
+        let due = policy.shouldReload(now: t0.addingTimeInterval(900), pressure: .normal)
         #expect(!early)
         #expect(due)
     }

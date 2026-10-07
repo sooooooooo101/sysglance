@@ -33,11 +33,13 @@ struct SnapshotProvider: TimelineProvider {
     }
 
     /// 同じスナップショットで5分おきのエントリを作り、「○分前」と鮮度判定を進める。
-    /// 新しい値は本体アプリの reloadAllTimelines() で届く。
+    /// 新しい値は本体アプリの reloadAllTimelines() で届くが、OS が間引くことがあるので
+    /// 鮮度判定の閾値（staleAfter）まで先のエントリを用意しておく。
     func getTimeline(in context: Context, completion: @escaping (Timeline<SnapshotEntry>) -> Void) {
         let now = Date()
         let envelope = load()
-        let entries = (0..<4).map { SnapshotEntry(date: now.addingTimeInterval(Double($0) * 300), envelope: envelope) }
+        let count = Int(SnapshotFile.staleAfter / 300) + 1
+        let entries = (0..<count).map { SnapshotEntry(date: now.addingTimeInterval(Double($0) * 300), envelope: envelope) }
         completion(Timeline(entries: entries, policy: .after(now.addingTimeInterval(15 * 60))))
     }
 

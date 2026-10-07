@@ -17,8 +17,9 @@ public enum SnapshotFile {
     public static let appGroupID = "FJW7DK8RB4.com.soshi.sysglance"
     public static let fileName = "snapshot.json"
     public static let schemaVersion = 1
-    /// これより古いスナップショットは「本体が起動していない」とみなす
-    public static let staleAfter: TimeInterval = 600
+    /// これより古いスナップショットは「本体が起動していない」とみなす。
+    /// OS がウィジェット再読込を間引くため、再読込間隔（15分）より十分長くする。
+    public static let staleAfter: TimeInterval = 2_700
 
     public enum DecodeError: Error, Equatable {
         case unsupportedSchema(Int)
@@ -64,7 +65,8 @@ public enum SnapshotFile {
 
 /// ウィジェットのタイムライン再読込は OS の予算を消費するため、呼ぶ条件を絞る。
 public struct WidgetReloadPolicy: Sendable {
-    public static let minimumInterval: TimeInterval = 300
+    /// WidgetKit の1日あたりの再読込予算（目安 40〜70 回）を使い切らないための間隔
+    public static let minimumInterval: TimeInterval = 900
     private var lastReload: Date?
     private var lastPressure: MemoryPressure?
 
