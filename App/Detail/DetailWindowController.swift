@@ -38,6 +38,9 @@ final class DetailWindowController: NSObject, NSWindowDelegate {
         attachContent()
         NSApp.activate()
         window?.makeKeyAndOrderFront(nil)
+        // 他のアプリから開かれたとき macOS が前面化を許可しないことがある。
+        // その場合もウィンドウだけは最前面に出し、後ろに隠れたままにしない。
+        window?.orderFrontRegardless()
     }
 
     // ウィンドウが見えていない間も SwiftUI が毎秒の履歴更新を監視し続けると、
