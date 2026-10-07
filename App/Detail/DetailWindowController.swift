@@ -28,6 +28,8 @@ final class DetailWindowController: NSObject, NSWindowDelegate {
                                   backing: .buffered, defer: false)
             window.title = "SysGlance"
             window.isReleasedWhenClosed = false
+            // 別のデスクトップ（Space）で開いたままでも、開き直したら今のデスクトップに持ってくる
+            window.collectionBehavior = [.moveToActiveSpace]
             window.delegate = self
             window.center()
             window.setFrameAutosaveName("SysGlanceDetail")
