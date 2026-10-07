@@ -42,17 +42,13 @@ final class DesktopPanelController: NSObject {
 
     func show() {
         let size = settings.size.size
-        let origin = settings.panelOrigin.flatMap { saved in
-            NSScreen.screens.contains { $0.visibleFrame.intersects(CGRect(origin: saved, size: size)) } ? saved : nil
-        } ?? defaultOrigin(for: size)
+        let main = NSScreen.main?.visibleFrame ?? CGRect(x: 0, y: 0, width: 1440, height: 900)
+        let origin = PanelPlacement.restoredOrigin(saved: settings.panelOrigin, size: size,
+                                                   screens: NSScreen.screens.map(\.visibleFrame), main: main,
+                                                   margin: Self.screenMargin)
         panel.setFrame(CGRect(origin: origin, size: size), display: true)
         panel.orderFrontRegardless()
         observeSize()
-    }
-
-    private func defaultOrigin(for size: CGSize) -> CGPoint {
-        let visible = NSScreen.main?.visibleFrame ?? CGRect(x: 0, y: 0, width: 1440, height: 900)
-        return CGPoint(x: visible.maxX - size.width - Self.screenMargin, y: visible.maxY - size.height - Self.screenMargin)
     }
 
     /// サイズ変更時は左上を固定して伸縮し、画面からはみ出したら吸着で戻す
