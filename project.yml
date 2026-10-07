@@ -1,0 +1,74 @@
+name: SysGlance
+options:
+  bundleIdPrefix: com.soshi
+  deploymentTarget:
+    macOS: "26.0"
+  createIntermediateGroups: true
+settings:
+  base:
+    DEVELOPMENT_TEAM: FJW7DK8RB4
+    CODE_SIGN_STYLE: Automatic
+    SWIFT_VERSION: "6.0"
+    MARKETING_VERSION: "1.0"
+    CURRENT_PROJECT_VERSION: "1"
+    ENABLE_USER_SCRIPT_SANDBOXING: YES
+    SWIFT_TREAT_WARNINGS_AS_ERRORS: YES
+    GCC_TREAT_WARNINGS_AS_ERRORS: YES
+packages:
+  SysGlanceCore:
+    path: Packages/SysGlanceCore
+targets:
+  SysGlance:
+    type: application
+    platform: macOS
+    sources: [App, SharedUI]
+    dependencies:
+      - package: SysGlanceCore
+      - target: SysGlanceWidget
+        embed: true
+    info:
+      path: App/Info.plist
+      properties:
+        CFBundleDisplayName: SysGlance
+        LSUIElement: true
+        LSApplicationCategoryType: public.app-category.utilities
+        CFBundleURLTypes:
+          - CFBundleURLName: com.soshi.sysglance
+            CFBundleURLSchemes: [sysglance]
+    entitlements:
+      path: App/SysGlance.entitlements
+      properties:
+        com.apple.security.application-groups: [FJW7DK8RB4.com.soshi.sysglance]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.soshi.sysglance
+        ENABLE_HARDENED_RUNTIME: YES
+  SysGlanceWidget:
+    type: app-extension
+    platform: macOS
+    sources: [Widget, SharedUI]
+    dependencies:
+      - package: SysGlanceCore
+    info:
+      path: Widget/Info.plist
+      properties:
+        CFBundleDisplayName: SysGlance
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+    entitlements:
+      path: Widget/SysGlanceWidget.entitlements
+      properties:
+        com.apple.security.app-sandbox: true
+        com.apple.security.application-groups: [FJW7DK8RB4.com.soshi.sysglance]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.soshi.sysglance.widget
+        ENABLE_HARDENED_RUNTIME: YES
+schemes:
+  SysGlance:
+    build:
+      targets:
+        SysGlance: all
+        SysGlanceWidget: all
+    run:
+      config: Debug
