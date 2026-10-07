@@ -45,6 +45,8 @@ import Testing
     @Test(arguments: [
         ("en0", false, true), ("en7", false, true), ("lo0", true, false), ("utun4", false, false),
         ("awdl0", false, false), ("llw0", false, false), ("bridge0", false, false),
+        // 標準の IKEv2/L2TP VPN・インターネット共有・VM ネットワークも物理 IF と二重計上になる
+        ("ipsec0", false, false), ("ppp0", false, false), ("ap1", false, false), ("vmenet0", false, false),
     ])
     func interfaceFilter(name: String, loopback: Bool, counted: Bool) {
         #expect(IOReaders.isCountedInterface(name: name, isLoopback: loopback) == counted)

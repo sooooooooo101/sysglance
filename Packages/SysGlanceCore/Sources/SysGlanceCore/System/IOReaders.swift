@@ -60,9 +60,9 @@ public enum IOReaders {
         return characteristics?["Physical Interconnect Location"] as? String == "Internal"
     }
 
-    private static let excludedInterfacePrefixes = ["lo", "utun", "awdl", "llw", "bridge", "anpi", "gif", "stf"]
+    private static let excludedInterfacePrefixes = ["lo", "utun", "ipsec", "ppp", "awdl", "llw", "bridge", "anpi", "ap", "vmenet", "gif", "stf"]
 
-    /// VPN（utun）などの仮想IFは物理IFと二重計上になるので数えない。
+    /// VPN（utun / ipsec / ppp）、インターネット共有（ap）、VM（vmenet）などの仮想IFは物理IFと二重計上になるので数えない。
     public static func isCountedInterface(name: String, isLoopback: Bool) -> Bool {
         guard !isLoopback else { return false }
         return !excludedInterfacePrefixes.contains { name.hasPrefix($0) }
